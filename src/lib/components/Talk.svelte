@@ -26,7 +26,7 @@
 			'Content-Type': 'application/xml',
 			Authorization: `KakaoAK ${$ttsApiKey}`
 		};
-		const synth_in = `<speak> <voice name='WOMAN_DIALOG_BRIGHT'> ${empathyRes.text} </voice> </speak>`;
+		const synth_in = `<speak> <voice name='WOMAN_READ_CALM'> ${empathyRes.text} </voice> </speak>`;
 
 		const res = await fetch(synthesize_url, {
 			method: 'POST',
@@ -75,6 +75,9 @@
 		let audioSource;
 		const setIdle = () => {
 			$currentStatus = $status.idle;
+			if ($currentStatus === $status.idle) {
+				recognition.start();
+			}
 		};
 
 		const reader = new FileReader();
@@ -89,17 +92,11 @@
 				recognition.onstart = () => {
 					console.debug('Speech recognition started');
 
-					if ($currentStatus === $status.idle) {
-						if (audioSource && audioSource.removeEventListenr) {
-							audioSource.removeEventListenr('ended', setIdle);
-						}
-						mediaRecorder.start();
-						console.debug('Media recorder started');
-					} else {
-						setTimeout(() => {
-							recognition.stop();
-						}, 200);
+					if (audioSource && audioSource.removeEventListenr) {
+						audioSource.removeEventListenr('ended', setIdle);
 					}
+					mediaRecorder.start();
+					console.debug('Media recorder started');
 				};
 
 				recognition.onresult = (e) => {
@@ -137,7 +134,9 @@
 							$currentStatus = $status.thinking;
 						}
 
-						recognition.start();
+						if ($currentStatus === $status.idle) {
+							recognition.start();
+						}
 					}
 				};
 
