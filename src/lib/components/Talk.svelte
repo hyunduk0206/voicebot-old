@@ -27,7 +27,7 @@
 		$currentStatus = $status.idle;
 	};
 
-	const fetchTtsData = async (empathyRes: EmpathyRes) => {
+	const fetchTtsData = async (empathyRes: EmpathyRes): Promise<ArrayBuffer> => {
 		const synthesize_url = 'https://kakaoi-newtone-openapi.kakao.com/v1/synthesize';
 		const headers_synth = {
 			'Content-Type': 'application/xml',
@@ -77,6 +77,19 @@
 
 		const audioCtx = new AudioContext();
 		let audioSource;
+		const playAudioData = (audioData) => {
+			try {
+				audioCtx.decodeAudioData(audioData, (buffer) => {
+					audioSource = audioCtx.createBufferSource();
+					audioSource.addEventListener('ended', setIdle);
+					audioSource.buffer = buffer;
+					audioSource.connect(audioCtx.destination);
+					audioSource.start(0);
+				});
+			} catch (error) {
+				throw error;
+			}
+		};
 
 		const gnSpeechRecognition = (mediaRecorder) => {
 			if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
@@ -104,6 +117,9 @@
 							console.error('Deadlock');
 
 							// [TODO] solve deadlock issue
+							$currentStatus = $status.idle;
+							$say = '안녕하세요';
+							talk();
 
 							setTimeout(() => {
 								window.location.reload();
@@ -197,20 +213,16 @@
 					reader.readAsDataURL(blob);
 					reader.onloadend = async () => {
 						const base64data = reader.result;
-						const empathyRes = await fetchEmpathyData(base64data, $heard, 'temp-uid'); // [TODO] connect to db
-						const audioData = await fetchTtsData(empathyRes);
-
-						audioCtx.decodeAudioData(audioData, (buffer) => {
-							audioSource = audioCtx.createBufferSource();
-							audioSource.addEventListener('ended', setIdle);
-							audioSource.buffer = buffer;
-							audioSource.connect(audioCtx.destination);
-							audioSource.start(0);
-						});
-						$currentExpression = $expression[`${empathyRes.emotion}`];
-
+						try {
+							const empathyRes = await fetchEmpathyData(base64data, $heard, 'temp-uid'); // [TODO] connect to db
+							const audioData: ArrayBuffer = await fetchTtsData(empathyRes);
+							playAudioData(audioData);
+							$currentExpression = $expression[`${empathyRes.emotion}`];
+							$say = empathyRes.text;
+						} catch (error) {
+							console.error(error);
+						}
 						$currentStatus = $status.talking;
-						$say = empathyRes.text;
 					};
 				}
 				chunks = [];
@@ -230,14 +242,14 @@
 				const constraints = {
 					audio: true
 				};
-
 				stream = await navigator.mediaDevices.getUserMedia(constraints);
-				console.debug('VAD:', stream);
-				startMediaRecorder(stream);
-				gnSpeechRecognition(mediaRecorder);
 			} catch (err) {
 				console.error(err);
 			}
+
+			console.debug('VAD:', stream);
+			startMediaRecorder(stream);
+			gnSpeechRecognition(mediaRecorder);
 		};
 
 		$currentStatus = $status.idle;

@@ -46,12 +46,7 @@
 		const domElemRemote = genDomElem('-remote');
 
 		try {
-			webrtcLocal = webrtcStart(
-				$endpoints.offerLocalEndpoint,
-				webrtcParams,
-				domElemLocal,
-				userId
-			);
+			webrtcLocal = webrtcStart($endpoints.offerLocalEndpoint, webrtcParams, domElemLocal, userId);
 			webrtcRemote = webrtcStart(
 				$endpoints.offerRemoteEndpoint,
 				webrtcParamsKeti,
@@ -117,7 +112,9 @@
 			<h2>Media</h2>
 
 			<audio id="webrtc-audio-remote" autoplay />
-			<video id="webrtc-video-remote" autoplay playsinline />
+			<video id="webrtc-video-remote" autoplay playsinline>
+				<track kind="captions" />
+			</video>
 		</div>
 
 		<h2>Data channel</h2>
