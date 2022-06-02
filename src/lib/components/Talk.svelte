@@ -110,10 +110,13 @@
 						mediaRecorder.start();
 						console.debug(`Media recorder started | ${$currentStatus}`);
 					} else {
-						if ($currentStatus === $status.thinking || $currentStatus === $status.talking) {
+						if (
+							($currentStatus === $status.thinking || $currentStatus === $status.talking) &&
+							watchdogTimer < 20
+						) {
 							console.debug(`watchdogTimer: ${watchdogTimer} times`);
 							watchdogTimer++;
-						} else if (watchdogTimer > 10) {
+						} else if (watchdogTimer >= 20) {
 							console.error('Deadlock');
 
 							// [TODO] solve deadlock issue
