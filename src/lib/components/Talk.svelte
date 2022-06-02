@@ -15,6 +15,7 @@
 	let isActive = false;
 	let errorNoReason = false;
 	let watchdogTimer = 0;
+	const WATCHDOG_LIMIT = 20;
 	// const reloadDelay = 60 * 60 * 12;
 
 	let chunks = [];
@@ -112,14 +113,15 @@
 					} else {
 						if (
 							($currentStatus === $status.thinking || $currentStatus === $status.talking) &&
-							watchdogTimer < 20
+							watchdogTimer < WATCHDOG_LIMIT
 						) {
 							console.debug(`watchdogTimer: ${watchdogTimer} times`);
 							watchdogTimer++;
-						} else if (watchdogTimer >= 20) {
+						} else if (watchdogTimer >= WATCHDOG_LIMIT) {
 							console.error('Deadlock');
 
 							// [TODO] solve deadlock issue
+							recognition.stop();
 							$currentStatus = $status.idle;
 							$say = '안녕하세요';
 							talk();
@@ -173,7 +175,7 @@
 						errorNoReason = false;
 					}
 
-					recognition.start();
+					if (watchdogTimer < WATCHDOG_LIMIT) recognition.start();
 				};
 
 				recognition.start();
