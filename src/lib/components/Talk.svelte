@@ -13,7 +13,7 @@
 	import { ttsApiKey } from '$lib/stores/api-keys';
 
 	let isActive = false;
-	let errorNoReason = false;
+	let errorNoReason = 0;
 	let watchdogTimer = 0;
 	const WATCHDOG_LIMIT = 20;
 	let deadlock = false;
@@ -79,6 +79,22 @@
 
 		const audioCtx = new AudioContext();
 		let audioSource;
+
+		const resumeAfterDeadlock = () => {
+			console.error('Deadlock');
+			watchdogTimer = 0;
+			deadlock = true;
+			recognition.stop();
+			audioSource.stop();
+			$say = '안녕하세요';
+
+			try {
+				talk();
+			} catch (error) {
+				console.error(error);
+			}
+		};
+
 		const playAudioData = (audioData) => {
 			try {
 				audioCtx.decodeAudioData(audioData, (buffer) => {
@@ -103,6 +119,7 @@
 
 				recognition.onstart = () => {
 					console.debug(`Speech recognition started | ${$currentStatus}`);
+					errorNoReason = 0;
 					deadlock = false;
 
 					if ($currentStatus === $status.idle) {
@@ -121,18 +138,8 @@
 							watchdogTimer++;
 						} else if (watchdogTimer >= WATCHDOG_LIMIT) {
 							// [TODO] solve deadlock issue
-							console.error('Deadlock');
-							watchdogTimer = 0;
-							deadlock = true;
-							recognition.stop();
-							audioSource.stop();
-							$say = '안녕하세요';
 
-							try {
-								talk();
-							} catch (error) {
-								console.error(error);
-							}
+							resumeAfterDeadlock();
 
 							// setTimeout(() => {
 							// 	window.location.reload();
@@ -166,7 +173,7 @@
 
 				recognition.onerror = () => {
 					console.error('Speech Recognition Error');
-					errorNoReason = true;
+					errorNoReason++;
 				};
 
 				recognition.onend = () => {
@@ -177,10 +184,9 @@
 					if (mediaRecorder.state === 'recording') mediaRecorder.stop();
 					if ($currentStatus === $status.listening) $currentStatus = $status.thinking;
 
-					if (errorNoReason) {
-						console.error('Error occurred without reason');
-						// $currentStatus = $status.idle;
-						errorNoReason = false;
+					if (errorNoReason > 3) {
+						console.error('Error occurred five times without reason');
+						resumeAfterDeadlock();
 					}
 
 					if (deadlock) return;
