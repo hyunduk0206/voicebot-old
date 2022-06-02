@@ -103,6 +103,7 @@
 
 				recognition.onstart = () => {
 					console.debug(`Speech recognition started | ${$currentStatus}`);
+					deadlock = false;
 
 					if ($currentStatus === $status.idle) {
 						watchdogTimer = 0;
@@ -119,14 +120,19 @@
 							console.debug(`watchdogTimer: ${watchdogTimer} times`);
 							watchdogTimer++;
 						} else if (watchdogTimer >= WATCHDOG_LIMIT) {
-							console.error('Deadlock');
-
 							// [TODO] solve deadlock issue
+							console.error('Deadlock');
+							watchdogTimer = 0;
 							deadlock = true;
 							recognition.stop();
-							$currentStatus = $status.idle;
+							audioSource.stop();
 							$say = '안녕하세요';
-							talk();
+
+							try {
+								talk();
+							} catch (error) {
+								console.error(error);
+							}
 
 							// setTimeout(() => {
 							// 	window.location.reload();
@@ -177,7 +183,9 @@
 						errorNoReason = false;
 					}
 
-					if (!deadlock) recognition.start();
+					if (deadlock) return;
+
+					recognition.start();
 				};
 
 				recognition.start();
@@ -245,7 +253,6 @@
 		};
 
 		const talk = async () => {
-			deadlock = false;
 			try {
 				const constraints = {
 					audio: true
