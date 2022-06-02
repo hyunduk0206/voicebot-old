@@ -16,6 +16,7 @@
 	let errorNoReason = false;
 	let watchdogTimer = 0;
 	const WATCHDOG_LIMIT = 20;
+	let deadlock = false;
 	// const reloadDelay = 60 * 60 * 12;
 
 	let chunks = [];
@@ -121,6 +122,7 @@
 							console.error('Deadlock');
 
 							// [TODO] solve deadlock issue
+							deadlock = true;
 							recognition.stop();
 							$currentStatus = $status.idle;
 							$say = '안녕하세요';
@@ -175,7 +177,7 @@
 						errorNoReason = false;
 					}
 
-					if (watchdogTimer < WATCHDOG_LIMIT) recognition.start();
+					if (!deadlock) recognition.start();
 				};
 
 				recognition.start();
@@ -243,6 +245,7 @@
 		};
 
 		const talk = async () => {
+			deadlock = false;
 			try {
 				const constraints = {
 					audio: true
