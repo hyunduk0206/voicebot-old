@@ -15,7 +15,7 @@
 	let isActive = false;
 	let errorNoReason = false;
 	let watchdogTimer = 0;
-	const reloadDelay = 60 * 60 * 12;
+	// const reloadDelay = 60 * 60 * 12;
 
 	let chunks = [];
 
@@ -121,9 +121,9 @@
 							$say = '안녕하세요';
 							talk();
 
-							setTimeout(() => {
-								window.location.reload();
-							}, reloadDelay);
+							// setTimeout(() => {
+							// 	window.location.reload();
+							// }, reloadDelay);
 						}
 
 						setTimeout(() => {
