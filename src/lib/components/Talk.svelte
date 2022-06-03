@@ -17,7 +17,6 @@
 	let watchdogTimer = 0;
 	const WATCHDOG_LIMIT = 20;
 	let deadlock = false;
-	// const reloadDelay = 60 * 60 * 12;
 
 	let chunks = [];
 
@@ -81,18 +80,22 @@
 		let audioSource;
 
 		const resumeAfterDeadlock = () => {
-			console.error('Deadlock');
-			watchdogTimer = 0;
-			deadlock = true;
-			recognition.stop();
-			audioSource.stop();
-			$say = '안녕하세요';
+			const reloadDelay = 60 * 60 * 0.5;
+			setTimeout(() => {
+				window.location.reload();
+			}, reloadDelay);
+			// console.error('Deadlock');
+			// watchdogTimer = 0;
+			// deadlock = true;
+			// recognition.stop();
+			// audioSource.stop();
+			// $say = '안녕하세요';
 
-			try {
-				talk();
-			} catch (error) {
-				console.error(error);
-			}
+			// try {
+			// 	talk();
+			// } catch (error) {
+			// 	console.error(error);
+			// }
 		};
 
 		const playAudioData = (audioData) => {
@@ -140,10 +143,6 @@
 							// [TODO] solve deadlock issue
 
 							resumeAfterDeadlock();
-
-							// setTimeout(() => {
-							// 	window.location.reload();
-							// }, reloadDelay);
 						}
 
 						setTimeout(() => {
