@@ -80,7 +80,7 @@
 		let audioSource;
 
 		const resumeAfterDeadlock = () => {
-			const reloadDelay = 60 * 60 * 0.5;
+			const reloadDelay = 1000 * 60 * 60 * 0.5;
 			setTimeout(() => {
 				window.location.reload();
 			}, reloadDelay);
