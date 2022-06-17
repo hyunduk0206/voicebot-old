@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fetchTtsData, fetchEmpathyData } from '$lib/api/talk';
 	import { onMount, onDestroy } from 'svelte';
 	import {
 		currentStatus,
@@ -8,9 +9,7 @@
 		currentExpression,
 		expression
 	} from '$lib/stores/bot';
-	import { endpoints } from '$lib/stores/endpoints';
 	import { debugMode } from '$lib/stores/config';
-	import { ttsApiKey } from '$lib/stores/api-keys';
 
 	let isActive = false;
 	let errorNoReason = 0;
@@ -28,49 +27,6 @@
 		$currentStatus = $status.idle;
 	};
 
-	const fetchTtsData = async (empathyRes: EmpathyRes): Promise<ArrayBuffer> => {
-		const synthesize_url = 'https://kakaoi-newtone-openapi.kakao.com/v1/synthesize';
-		const headers_synth = {
-			'Content-Type': 'application/xml',
-			Authorization: `KakaoAK ${$ttsApiKey}`
-		};
-		const synth_in = `<speak> <voice name='WOMAN_DIALOG_BRIGHT'> ${empathyRes.text} </voice> </speak>`;
-		const res = await fetch(synthesize_url, {
-			method: 'POST',
-			headers: headers_synth,
-			body: JSON.stringify({
-				data: synth_in
-			})
-		});
-		if (!res.ok) {
-			const message = await res.text();
-			throw new Error(message);
-		}
-		return await res.arrayBuffer();
-	};
-
-	const fetchEmpathyData = async (base64data, text, uid) => {
-		const empahtyReq: EmpathyReq = {
-			audio: base64data,
-			text,
-			uid
-		};
-		const res = await fetch($endpoints.talkEndpoint, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(empahtyReq)
-		});
-
-		if (!res.ok) {
-			const message = await res.text();
-			throw new Error(message);
-		}
-
-		return await res.json();
-	};
-
 	onMount(() => {
 		console.debug('talk.svelte mounted');
 
@@ -80,11 +36,11 @@
 		let audioSource;
 
 		const resumeAfterDeadlock = () => {
+			console.error('Deadlock');
 			const reloadDelay = 1000 * 60 * 60 * 0.5;
 			setTimeout(() => {
 				window.location.reload();
 			}, reloadDelay);
-			// console.error('Deadlock');
 			// watchdogTimer = 0;
 			// deadlock = true;
 			// recognition.stop();
@@ -232,10 +188,15 @@
 					const reader = new FileReader();
 					reader.readAsDataURL(blob);
 					reader.onloadend = async () => {
-						const base64data = reader.result;
+						const audio = reader.result;
+						const empathyReq = {
+							audio,
+							text: $heard,
+							uid: 'temp-uid'
+						};
 						try {
-							const empathyRes = await fetchEmpathyData(base64data, $heard, 'temp-uid'); // [TODO] connect to db
-							const audioData: ArrayBuffer = await fetchTtsData(empathyRes);
+							const empathyRes = await fetchEmpathyData(empathyReq); // [TODO] connect to db
+							const audioData: ArrayBuffer = await fetchTtsData(empathyRes.text);
 							playAudioData(audioData);
 							$currentExpression = $expression[`${empathyRes.emotion}`];
 							$say = empathyRes.text;
