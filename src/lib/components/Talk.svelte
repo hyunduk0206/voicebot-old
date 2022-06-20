@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { fetchTtsData, fetchEmpathyData } from '$lib/api/talk';
 	import { onMount, onDestroy } from 'svelte';
+
+	import { fetchTtsData, fetchEmpathyData } from '$lib/api/talk';
 	import {
 		currentStatus,
 		say,
@@ -9,19 +10,18 @@
 		currentExpression,
 		expression
 	} from '$lib/stores/bot';
-	import { debugMode } from '$lib/stores/config';
+	import { reloadApp } from '$lib/utils/reloadApp';
 
+	const WATCHDOG_LIMIT = 20;
 	let isActive = false;
 	let errorNoReason = 0;
 	let watchdogTimer = 0;
-	const WATCHDOG_LIMIT = 20;
 	let deadlock = false;
-
 	let chunks = [];
-
 	let recognition = null;
 	let mediaRecorder = null;
 	let stream = null;
+	const DELAY_RELOAD = 1000 * 60 * 30;
 
 	const setIdle = () => {
 		$currentStatus = $status.idle;
@@ -34,25 +34,6 @@
 
 		const audioCtx = new AudioContext();
 		let audioSource;
-
-		const resumeAfterDeadlock = () => {
-			console.error('Deadlock');
-			const reloadDelay = 1000 * 60 * 60 * 0.5;
-			setTimeout(() => {
-				window.location.reload();
-			}, reloadDelay);
-			// watchdogTimer = 0;
-			// deadlock = true;
-			// recognition.stop();
-			// audioSource.stop();
-			// $say = '안녕하세요';
-
-			// try {
-			// 	talk();
-			// } catch (error) {
-			// 	console.error(error);
-			// }
-		};
 
 		const playAudioData = (audioData) => {
 			try {
@@ -98,7 +79,7 @@
 						} else if (watchdogTimer >= WATCHDOG_LIMIT) {
 							// [TODO] solve deadlock issue
 
-							resumeAfterDeadlock();
+							reloadApp(window, DELAY_RELOAD);
 						}
 
 						setTimeout(() => {
@@ -141,7 +122,7 @@
 
 					if (errorNoReason > 3) {
 						console.error('Error occurred five times without reason');
-						resumeAfterDeadlock();
+						reloadApp(window, DELAY_RELOAD);
 					}
 
 					if (deadlock) return;
@@ -170,20 +151,6 @@
 					const blob = new Blob(chunks, {
 						type: 'audio/webm; codecs=opus'
 					});
-
-					if ($debugMode) {
-						const clipContainer = document.createElement('article');
-						const audio = document.createElement('audio');
-
-						clipContainer.classList.add('clip');
-						audio.setAttribute('controls', '');
-
-						clipContainer.appendChild(audio);
-						soundClips.appendChild(clipContainer);
-
-						const audioURL = window.URL.createObjectURL(blob);
-						audio.src = audioURL;
-					}
 
 					const reader = new FileReader();
 					reader.readAsDataURL(blob);
@@ -227,12 +194,10 @@
 			} catch (err) {
 				console.error(err);
 			}
-
 			console.debug('VAD:', stream);
 			startMediaRecorder(stream);
 			gnSpeechRecognition(mediaRecorder);
 		};
-
 		$currentStatus = $status.idle;
 		$say = '안녕하세요';
 		talk();
@@ -256,10 +221,3 @@
 		}
 	});
 </script>
-
-{#if $debugMode}
-	<div>
-		<h1>VAD debug</h1>
-		<section class="sound-clips" />
-	</div>
-{/if}
